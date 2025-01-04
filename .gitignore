@@ -1,0 +1,14 @@
+/venv/
+
+/__pycache__/
+/data/
+
+azure_key.txt
+.DS_Store
+
+*.txt
+*.pkl
+*.csv
+*.json
+
+/*/
