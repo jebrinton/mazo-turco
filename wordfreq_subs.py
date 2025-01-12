@@ -60,8 +60,8 @@ def make_sorted_sentences(folder_name, l1, l2):
     df = pd.DataFrame({l1: l1_subtitles, l1_scores_name: l1_scores, l2: l2_subtitles, l2_scores_name: l2_scores})
 
     # drop duplicates
-    df = df.drop_duplicates(subset=l1_scores_name, keep=False)
-    df = df.drop_duplicates(subset=l2_scores_name, keep=False)
+    df = df.drop_duplicates(subset=l1_subtitles, keep=False)
+    df = df.drop_duplicates(subset=l2_subtitles, keep=False)
 
     df["score"] = round(2 * df[l1_scores_name] + df[l2_scores_name], 2)
     
@@ -88,7 +88,7 @@ def make_sorted_sentences(folder_name, l1, l2):
 
 
 if __name__ == "__main__":
-    make_sorted_sentences("tatoeba_tr_en", "tr", "en")
+    make_sorted_sentences("tatoeba_es_en", "es", "en")
     
 
 
