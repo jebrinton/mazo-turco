@@ -5,12 +5,29 @@ import re
 import pandas as pd
 import wordfreq
 import numpy as np
+import spacy
+
+from lemmatizer import lemmatize as tr_lemmatize, get_lemma_dict
 
 ## TODO: add lemmatization
 
-def remove_proper_nouns(sentence):
+def en_lemmatize(sentence, nlp):
+    doc = nlp(sentence)
+    return [token.lemma_ for token in doc]
+
+def remove_proper_nouns_and_numbers(sentence):
     # Divide la oración en palabras
     words = sentence.split()
+
+    def not_number(word):
+        try:
+            float(word)  # Intenta convertir la palabra a número
+            return False
+        except ValueError:
+            return True
+
+    words = list(filter(not_number, words))
+
     if not words:
         return sentence  # Devuelve la oración si está vacía
     
@@ -26,29 +43,33 @@ def remove_proper_nouns(sentence):
     result = f"{first_word} {' '.join(cleaned_remaining.split())}"
     return result
 
-def get_sentence_metrics(sentence, lang, frequencies):
+def get_sentence_metrics(sentence, lang, frequencies, lemma_dict, nlp=None):
     ##
     # you know what, almost the thing that matters most is the hardest word, or at least it should be heavily weighted towards the hardest word
     # otherwise, a sentence such as "bu parlak" is ostensibly easier than "parlak"
     
-    tokenized = wordfreq.tokenize(remove_proper_nouns(sentence), lang)
+    tokenized = wordfreq.tokenize(remove_proper_nouns_and_numbers(sentence), lang)
+    if lang == "tr":
+        lemmatized = [tr_lemmatize(token, lemma_dict) for token in tokenized]
+    elif lang == "en":
+        doc = nlp(sentence)
+        lemmatized = [token.lemma_ for token in doc]
+    else:
+        lemmatized = tokenized
     
-    freqs = np.zeros(len(tokenized))
-    # freqs = [-math.log10(frequencies.get(word, 1.0e-10)) for word in tokenized]
+    freqs = np.zeros(len(lemmatized))
 
-    for i, word in enumerate(tokenized):
+    for i, word in enumerate(lemmatized):  # Cambiado de tokenized a lemmatized
         freqs[i] = -math.log10(frequencies.get(word, 1.0e-10))
-        # if frequencies.get(word, 1.0e-10) == 1.0e-10:
-        #     print(word)
+        if frequencies.get(word, 1.0e-10) == 1.0e-10:
+            print(word)
 
     num_words = len(freqs)
 
     if num_words == 0:
-        # raise ValueError("Sentence tokenized to 0 words")
         print("Warning: Sentence tokenized to 0 words")
         return 0, 0, 0
 
-    # print(f"avg: {avg}, log_num_words: {math.log10(num_words)}, score: {score}")
     return np.linalg.norm(freqs, ord=np.inf), math.log10(num_words), math.log10(len(sentence))
 
 
@@ -84,13 +105,16 @@ def make_sorted_sentences(folder_path : pathlib.Path, l1, l2):
 
     AVG_COEFF = 7
 
+    lemma_dict = get_lemma_dict()
+    nlp = spacy.load('en_core_web_sm') if "en" in [l1, l2] else None
+
     # create new column with scores
-    l1_metrics = [get_sentence_metrics(sentence, l1, l1_frequencies) for sentence in l1_subtitles]
+    l1_metrics = [get_sentence_metrics(sentence, l1, l1_frequencies, lemma_dict, nlp) for sentence in l1_subtitles]
     l1_avg, l1_num_words, l1_num_chars = zip(*l1_metrics)
     l1_score = [AVG_COEFF * avg + num_words + num_chars for avg, num_words, num_chars in l1_metrics]
     print("Done with scoring " + l1)
 
-    l2_metrics = [get_sentence_metrics(sentence, l2, l2_frequencies) for sentence in l2_subtitles]
+    l2_metrics = [get_sentence_metrics(sentence, l2, l2_frequencies, lemma_dict, nlp) for sentence in l2_subtitles]
     l2_avg, l2_num_words, l2_num_chars = zip(*l2_metrics)
     l2_score = [AVG_COEFF * avg + num_words + num_chars for avg, num_words, num_chars in l2_metrics]
     print("Done with scoring " + l2)

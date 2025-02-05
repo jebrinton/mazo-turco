@@ -21,6 +21,10 @@ def translate(word, src_lang="tr", tgt_lang="es"):
     return deep_translator.GoogleTranslator(source=src_lang, target=tgt_lang).translate(word)
 
 
+def translate_unknown(word, translator):
+    return translator.translate(word)
+
+
 def clear_to_start(text):
     lines = text.split('\n') # separate lines
     lines = lines[::-1] # reverse list
@@ -36,7 +40,7 @@ def clear_to_start(text):
     sys.stdout.write('\r') # move to beginning of line again
 
 
-def round_of(cumle, frase):
+def round_of(cumle, frase, translator):
     # imprimir frase turca
     # cümle
     print(cumle)
@@ -48,7 +52,7 @@ def round_of(cumle, frase):
         if my_input == "":
             break
         else:
-            print(f"{my_input} -> {translate(my_input.strip())}")
+            print(f"{my_input} -> {translate_unknown(my_input.strip(), translator)}")
 
     # mostrar traducción (frase española)
     print(frase)
@@ -70,12 +74,14 @@ def round_of(cumle, frase):
             time.sleep(0.8)
             print(LINE_UP, end=LINE_CLEAR)
         else:
-            print(f"{my_input} -> {translate(my_input.strip())}")
+            print(f"{my_input} -> {translate_unknown(my_input.strip(), translator)}")
 
 
 def game(user : pathlib.Path):
     gamestate = user / "sentence_scores.pkl"
     df = pd.read_pickle(gamestate)
+
+    translator = deep_translator.GoogleTranslator(source="tr", target="es")
 
     # elegir oración inicial
     idx = int(len(df) * random.uniform(0.03, 0.077))
@@ -90,7 +96,7 @@ def game(user : pathlib.Path):
 
         print(f"Zorluk {round(((100 * idx) / len(df)), 2)}")
         
-        knew_translation = round_of(sub["src"], sub["tgt"])
+        knew_translation = round_of(sub["src"], sub["tgt"], translator)
 
         print("q to quit")
         if input() == "q":
